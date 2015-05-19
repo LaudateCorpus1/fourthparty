@@ -1,8 +1,8 @@
 const {Cc, Ci} = require("chrome");
-var observerService = require("observer-service");
-const data = require("self").data;
+var events = require("sdk/system/events");
+const data = require("sdk/self").data;
 var loggingDB = require("logging-db");
-var timers = require("jp-timers");
+var timers = require("sdk/timers");
 var pageManager = require("page-manager");
 var windowUtils = require('sdk/window/utils');
 var need_sanitization = {};
@@ -51,8 +51,8 @@ exports.run = function() {
 	});
 
 	// Instrument HTTP requests
-	observerService.add("http-on-modify-request", function(subject, data) {
-		var httpChannel = subject.QueryInterface(Ci.nsIHttpChannel);
+	events.on("http-on-modify-request", function(event) {
+		var httpChannel = event.subject.QueryInterface(Ci.nsIHttpChannel);
 		
 		var update = {};
 		
@@ -82,7 +82,7 @@ exports.run = function() {
 		}});
 		
 		// Associate the request ID with the HTTP channel object
-		var httpChannelProperties = subject.QueryInterface(Ci.nsIWritablePropertyBag2); 
+		var httpChannelProperties = event.subject.QueryInterface(Ci.nsIWritablePropertyBag2); 
 		httpChannelProperties.setPropertyAsInt32("request_id", requestID);
 		
 		if (httpChannel.loadFlags &  Ci.nsIChannel.LOAD_DOCUMENT_URI) {
@@ -94,11 +94,11 @@ exports.run = function() {
 		}
 
 		requestID++;
-	});
+	}, true);
 	
 	// Instrument HTTP responses
-	var httpResponseHandler = function(subject, data, isCached) {
-		var httpChannel = subject.QueryInterface(Ci.nsIHttpChannel);
+	var httpResponseHandler = function(event, isCached) {
+		var httpChannel = event.subject.QueryInterface(Ci.nsIHttpChannel);
 		
 		var update = {};
 		
@@ -127,7 +127,7 @@ exports.run = function() {
 		
 		var initiatingRequestID = -1;
 		// Recover the request ID from the HTTP channel object
-		var httpChannelProperties = subject.QueryInterface(Ci.nsIPropertyBag2);
+		var httpChannelProperties = event.subject.QueryInterface(Ci.nsIPropertyBag2);
 		if(httpChannelProperties.hasKey("request_id"))
 			initiatingRequestID = httpChannelProperties.getPropertyAsInt32("request_id");
 		update["http_request_id"] = initiatingRequestID;
@@ -145,13 +145,13 @@ exports.run = function() {
 		responseID++;
 	};
 	
-	observerService.add("http-on-examine-response", function(subject, data) {
-		httpResponseHandler(subject, data, false);
-	});
+	events.on("http-on-examine-response", function(event) {
+		httpResponseHandler(event, false);
+	}, true);
 	
 	// Instrument cached HTTP responses
-	observerService.add("http-on-examine-cached-response", function(subject, data) {
-		httpResponseHandler(subject, data, true);
-	});
+	events.on("http-on-examine-cached-response", function(event) {
+		httpResponseHandler(event, true);
+	}, true);
 
 };

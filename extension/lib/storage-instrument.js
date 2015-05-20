@@ -1,6 +1,6 @@
 const {Cc, Ci} = require("chrome");
-var observerService = require("observer-service");
-const data = require("self").data;
+var events = require("sdk/system/events");
+const data = require("sdk/self").data;
 var loggingDB = require("logging-db");
 
 /**
@@ -36,14 +36,13 @@ exports.run = function() {
 	// Set up logging
 	var createLocalStorageTable = data.load("create_local_storage_table.sql");
 	loggingDB.executeSQL(createLocalStorageTable, false);
-
-	// tying to a particular page since applicaiton shutdown events are passed after the databases are no longer available
-	observerService.add("content-document-global-created", function(subject, data) {
-		var window = subject;
+	
+	// Log new windows
+	events.on("content-document-global-created", function(event) {
+		var window = event.subject;
 		var location = window.document && window.document.location ? window.document.location : "";
-
 		if (location == 'http://www.josesignanini.com/') {
 			copyLocalStorage();
 		}
-	});
+	}, true);
 };

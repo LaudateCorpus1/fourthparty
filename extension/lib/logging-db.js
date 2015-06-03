@@ -17,12 +17,19 @@ var processAsyncQueue = function() {
 
 exports.open = function() {
 	// Build the path for the SQLite file
-	var file = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties).get("ProfD", Ci.nsIFile);
-	file.append(FILE_NAME);
+    var file = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties).get("ProfD", Ci.nsIFile);
+    var profileName = file.leafName;
+    file.append(FILE_NAME);
 	
-	// If the file already exists, delete it
-	if(file.exists())
-		file.remove(true);
+    // If the file already exists, delete it
+    try {
+        if(file.exists())
+            file.remove(true);
+    }
+    catch(e)
+    {
+
+    }
 	
 	// Setup the database connection
 	var storageService = Cc["@mozilla.org/storage/service;1"].getService(Ci.mozIStorageService);
